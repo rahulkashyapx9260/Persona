@@ -11,10 +11,8 @@
     "release": "node scripts/release.mjs"
   },
   "dependencies": {
-    "@react-native/new-app-screen": "0.88.1",
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-contacts": "^8.0.10",
     "react-native-safe-area-context": "^5.5.2"
   },
   "devDependencies": {

@@ -12,7 +12,14 @@
  * the signing key has not changed.
  */
 import {execFileSync} from 'node:child_process';
-import {copyFileSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -73,17 +80,15 @@ try {
 // ------------------------------------------------------------------ output
 
 mkdirSync(distDir, {recursive: true});
-const builtApk = join(
-  root,
-  'android',
-  'app',
-  'build',
-  'outputs',
-  'apk',
-  'release',
-  'app-release.apk',
-);
+const outDir = join(root, 'android', 'app', 'build', 'outputs', 'apk', 'release');
+
+const builtApk = join(outDir, 'app-release.apk');
+if (!existsSync(builtApk)) {
+  console.error(`No APK found at ${builtApk}`);
+  process.exit(1);
+}
 const apkName = `Persona-${versionName}.apk`;
+const apkBytes = statSync(builtApk).size;
 copyFileSync(builtApk, join(distDir, apkName));
 
 // The manifest lives at the repository root because that is what the app

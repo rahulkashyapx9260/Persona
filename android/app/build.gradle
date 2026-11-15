@@ -96,6 +96,7 @@ android {
     namespace "com.contactnames"
     defaultConfig {
         applicationId "com.contactnames"
+
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
@@ -117,6 +118,38 @@ android {
             }
         }
     }
+    /**
+     * Builds one APK per architecture alongside the combined one.
+     *
+     * arm64-v8a alone covers every phone sold since about 2016 and is the
+     * smallest thing worth handing someone; armeabi-v7a keeps older 32-bit
+     * phones working; the universal APK is the safe default when you do not
+     * know what the other person is carrying.
+     */
+    packaging {
+        jniLibs {
+            /*
+             * reactNativeArchitectures only decides what is compiled from
+             * source. The heavy libraries — libreactnative.so and Hermes —
+             * arrive prebuilt inside React Native's AAR carrying all four
+             * ABIs, so they have to be dropped here instead. Without this
+             * the universal APK stays at 52 MB while the per-ABI splits,
+             * which filter by their own include list, come out correct.
+             */
+            excludes += ["**/x86/**", "**/x86_64/**"]
+        }
+    }
+
+    /*
+     * Deliberately one APK for every phone.
+     *
+     * Per-architecture APKs are smaller, but then there is a wrong file to
+     * hand someone, and picking wrong fails to install rather than failing
+     * clearly. Google Play solves the same problem properly by taking an app
+     * bundle and generating per-device downloads itself, so splitting here
+     * would buy nothing there either.
+     */
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
