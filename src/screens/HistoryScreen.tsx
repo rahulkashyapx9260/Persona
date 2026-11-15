@@ -1,6 +1,7 @@
-import React from 'react';
-import {Alert, RefreshControl, ScrollView, Text, View} from 'react-native';
+import React, {useState} from 'react';
+import {RefreshControl, ScrollView, Text, View} from 'react-native';
 
+import {ConfirmDialog} from '../components/ConfirmDialog';
 import {ErrorBanner, GlowPill} from '../components/ui';
 import {ContactNames, HistorySource} from '../native/ContactNames';
 import {useAppData} from '../state/AppData';
@@ -19,20 +20,7 @@ export function HistoryScreen() {
   const palette = useColors();
   const {history, loading, error, refresh, runAction, busy} = useAppData();
 
-  const confirmClear = () => {
-    Alert.alert(
-      'Clear history?',
-      'The log of past name changes is deleted. Contacts and schedules are untouched.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => runAction('history', () => ContactNames.clearHistory()),
-        },
-      ],
-    );
-  };
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <ScrollView
@@ -85,10 +73,24 @@ export function HistoryScreen() {
             label="Clear history"
             tone="danger"
             disabled={busy !== null}
-            onPress={confirmClear}
+            onPress={() => setConfirming(true)}
           />
         </>
       )}
+
+      <ConfirmDialog
+        visible={confirming}
+        destructive
+        busy={busy === 'history'}
+        title="Clear history?"
+        message="The log of past name changes is deleted. Your contacts and time slots are untouched."
+        confirmLabel="Clear"
+        onConfirm={async () => {
+          await runAction('history', () => ContactNames.clearHistory());
+          setConfirming(false);
+        }}
+        onCancel={() => setConfirming(false)}
+      />
     </ScrollView>
   );
 }

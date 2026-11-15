@@ -16,6 +16,11 @@ import {Colors, radius, spacing, useColors, useThemedStyles} from '../theme';
 import {
   ALL_DAYS,
   DAY_LABELS,
+  formatGap,
+  isActiveOn,
+  nextStartAt,
+  nowMinutes,
+  today,
   WEEKDAYS,
   WEEKEND,
   dayCount,
@@ -33,7 +38,8 @@ type Props = {
   /** Existing slot to edit, or null to create one. */
   schedule: Schedule | null;
   onClose: () => void;
-  onSaved: () => void;
+  /** Receives a sentence describing when this slot next takes effect. */
+  onSaved: (summary: string) => void;
 };
 
 const PRESETS: Array<{label: string; mask: number}> = [
@@ -123,7 +129,7 @@ export function SlotEditorModal({
         daysMask,
         enabled,
       });
-      onSaved();
+      onSaved(summarise(displayName.trim(), start, end, daysMask, enabled));
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -274,6 +280,34 @@ export function SlotEditorModal({
       </KeyboardAvoidingView>
     </Modal>
   );
+}
+
+/**
+ * Says in one sentence when this slot takes effect, because "saved" on its
+ * own leaves the obvious question unanswered.
+ */
+function summarise(
+  name: string,
+  start: number,
+  end: number,
+  daysMask: number,
+  enabled: boolean,
+): string {
+  if (!enabled) {
+    return `The slot is saved but paused, so “${name}” will not be applied until you turn it on.`;
+  }
+
+  const now = new Date();
+  const liveNow = isActiveOn(start, end, daysMask, nowMinutes(), today());
+  if (liveNow) {
+    return `“${name}” is showing now, until ${minutesToLabel12h(end)}.`;
+  }
+
+  const at = nextStartAt(start, daysMask, now);
+  if (at === null) {
+    return `Pick at least one day for this slot to run.`;
+  }
+  return `The name changes to “${name}” ${formatGap(at - now.getTime())}, at ${minutesToLabel12h(start)}.`;
 }
 
 function TimeField({

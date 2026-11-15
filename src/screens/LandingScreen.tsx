@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
-import {Alert, Pressable, RefreshControl, ScrollView, Text, View} from 'react-native';
+import {Pressable, RefreshControl, ScrollView, Text, View} from 'react-native';
 
 import {AnimatedLogo} from '../components/AnimatedLogo';
+import {ConfirmDialog} from '../components/ConfirmDialog';
 import {ContactPickerModal} from '../components/ContactPickerModal';
 import {ErrorBanner, FeatureCard, SectionLabel} from '../components/ui';
 import {UpdateBanner} from '../components/UpdateBanner';
@@ -36,29 +37,18 @@ export function LandingScreen() {
   const slotCount = status?.scheduleCount ?? 0;
   const contactCount = status?.trackedContacts ?? 0;
 
-  const confirmRestoreAll = () => {
-    Alert.alert(
-      'Restore every contact?',
-      'Each tracked contact goes back to the name it had before this app changed it. Your time slots are kept.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Restore',
-          style: 'destructive',
-          onPress: () =>
-            runAction('restore', async () => {
-              const result = await ContactNames.restoreAll();
-              Alert.alert(
-                'Restored',
-                `${result.changed} contact(s) restored${
-                  result.failed ? `, ${result.failed} failed` : ''
-                }.`,
-              );
-            }),
-        },
-      ],
-    );
-  };
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<string | null>(null);
+
+  const doRestoreAll = () =>
+    runAction('restore', async () => {
+      const result = await ContactNames.restoreAll();
+      setConfirmRestore(false);
+      setRestoreResult(
+        `${result.changed} contact${result.changed === 1 ? '' : 's'} restored` +
+          (result.failed ? `, ${result.failed} could not be changed.` : '.'),
+      );
+    });
 
   return (
     <ScrollView
@@ -194,7 +184,7 @@ export function LandingScreen() {
         subtitle="Put every original name back, keeping your slots"
         tone="danger"
         disabled={busy !== null || groups.length === 0}
-        onPress={confirmRestoreAll}
+        onPress={() => setConfirmRestore(true)}
       />
 
       <Text style={styles.footnote}>
@@ -203,6 +193,27 @@ export function LandingScreen() {
         too. Run “Restore all names” before uninstalling — the backup lives
         inside this app.
       </Text>
+
+      <ConfirmDialog
+        visible={confirmRestore}
+        destructive
+        busy={busy === 'restore'}
+        title="Restore every contact?"
+        message="Each tracked contact goes back to the name it had before Persona changed it. Your time slots are kept, so schedules will apply again at their next start time."
+        confirmLabel="Restore all"
+        onConfirm={doRestoreAll}
+        onCancel={() => setConfirmRestore(false)}
+      />
+
+      <ConfirmDialog
+        visible={restoreResult !== null}
+        title="Done"
+        message={restoreResult ?? ''}
+        confirmLabel="OK"
+        cancelLabel="Close"
+        onConfirm={() => setRestoreResult(null)}
+        onCancel={() => setRestoreResult(null)}
+      />
 
       <ContactPickerModal
         visible={pickerVisible}

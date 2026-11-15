@@ -8,6 +8,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -68,34 +74,107 @@ object Notifier {
 
     ensureChannel(context)
 
-    val title = if (changes.size == 1) {
-      val (from, to) = changes[0]
-      "$from is now $to"
-    } else {
-      "${changes.size} contacts renamed"
-    }
-    val body = changes.joinToString(", ") { (from, to) -> "$from → $to" }
-
     val builder = NotificationCompat.Builder(context, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_notification)
-      .setContentTitle(title)
-      .setContentText(body)
-      .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+      // Tints the small icon and the app name line in the shade.
+      .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
+      .setSubText("Persona")
       // HIGH so the change actually surfaces as a banner rather than sliding
       // silently into the shade.
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setDefaults(NotificationCompat.DEFAULT_ALL)
       .setCategory(Notification.CATEGORY_REMINDER)
+      .setShowWhen(true)
+      .setWhen(System.currentTimeMillis())
       .setAutoCancel(true)
       .setContentIntent(openAppIntent(context))
 
+    if (changes.size == 1) {
+      // The new name is the headline, because that is what the phone now
+      // shows; the old one is the supporting detail.
+      val (from, to) = changes[0]
+      builder
+        .setContentTitle(to)
+        .setContentText("Was $from")
+        .setLargeIcon(avatarBitmap(context, to))
+        .setStyle(
+          NotificationCompat.BigTextStyle()
+            .bigText("Was $from")
+            .setSummaryText("Name changed"),
+        )
+    } else {
+      val style = NotificationCompat.InboxStyle()
+        .setBigContentTitle("${changes.size} contacts renamed")
+      for ((from, to) in changes.take(6)) {
+        style.addLine("$from  →  $to")
+      }
+      if (changes.size > 6) {
+        style.setSummaryText("+${changes.size - 6} more")
+      }
+      builder
+        .setContentTitle("${changes.size} contacts renamed")
+        .setContentText(changes.joinToString(", ") { (_, to) -> to })
+        .setStyle(style)
+    }
+
     try {
       NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build())
-      Log.i(TAG, "Posted: $title")
+      Log.i(TAG, "Posted ${changes.size} change(s)")
     } catch (e: SecurityException) {
       // The grant was revoked between the check and the post; nothing to do.
       Log.w(TAG, "Notification refused", e)
     }
+  }
+
+  /**
+   * A round avatar carrying the contact's initials, used as the large icon.
+   *
+   * Android has no built-in way to show "who" a notification is about unless
+   * you give it an image, and these contacts have no photo this app can rely
+   * on. The tint is derived from the name, so the same contact keeps the same
+   * colour every time — matching the avatars inside the app.
+   */
+  private fun avatarBitmap(context: Context, name: String): Bitmap {
+    val size = (context.resources.displayMetrics.density * 64).toInt().coerceAtLeast(96)
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val radius = size / 2f
+
+    val hue = hueFor(name)
+    val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.HSVToColor(floatArrayOf(hue, 0.55f, 0.85f))
+    }
+    canvas.drawCircle(radius, radius, radius, background)
+
+    val initials = initialsOf(name)
+    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.WHITE
+      textSize = size * 0.4f
+      textAlign = Paint.Align.CENTER
+      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+    // Centre on the glyph box rather than the baseline, so letters with no
+    // descender do not sit low in the circle.
+    val bounds = Rect()
+    text.getTextBounds(initials, 0, initials.length, bounds)
+    canvas.drawText(initials, radius, radius + bounds.height() / 2f, text)
+
+    return bitmap
+  }
+
+  private fun initialsOf(name: String): String {
+    val parts = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    val letters = parts.take(2).mapNotNull { it.firstOrNull() }.joinToString("")
+    return if (letters.isEmpty()) "#" else letters.uppercase()
+  }
+
+  /** Stable 0-359 hue from a string, so colours never shuffle. */
+  private fun hueFor(value: String): Float {
+    var hash = 0
+    for (char in value) {
+      hash = (hash * 31 + char.code) % 360
+    }
+    return ((hash + 360) % 360).toFloat()
   }
 
   private fun openAppIntent(context: Context): PendingIntent? {

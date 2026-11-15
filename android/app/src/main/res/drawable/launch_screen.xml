@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Brand blue with the app mark centred, shown for the moment before the
-     JS bundle has rendered its first frame. -->
+<!--
+  Brand blue with the app mark centred, shown for the moment before the JS
+  bundle has rendered its first frame.
+
+  The mark is a vector, so it is referenced as a layer item with an explicit
+  size. A <bitmap> cannot hold it: that tag only takes a raster image, and
+  pointing it at a vector fails to inflate and takes the activity down with
+  it on launch.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/ic_launcher_background" />
-    <item android:gravity="center">
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/ic_launcher_foreground" />
-    </item>
+    <item
+        android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center"
+        android:width="180dp"
+        android:height="180dp" />
 </layer-list>

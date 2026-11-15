@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, Pressable, ScrollView, Text, View} from 'react-native';
+import {Pressable, ScrollView, Text, View} from 'react-native';
 
+import {ConfirmDialog} from '../components/ConfirmDialog';
 import {SlotEditorModal} from '../components/SlotEditorModal';
 import {Avatar, ErrorBanner} from '../components/ui';
 import {useNavigation, useRouteParams} from '../navigation/Navigator';
@@ -50,27 +51,18 @@ export function ContactDetailScreen() {
       ),
   );
 
-  const confirmForget = () => {
+  const [confirmForget, setConfirmForget] = useState(false);
+  const [savedSummary, setSavedSummary] = useState<string | null>(null);
+
+  const doForget = async () => {
     if (!group) {
       return;
     }
-    Alert.alert(
-      `Stop managing ${group.originalName}?`,
-      'The contact is renamed back to its original name and all of its time slots are deleted.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Stop managing',
-          style: 'destructive',
-          onPress: async () => {
-            await runAction(`forget-${group.phone}`, () =>
-              ContactNames.forgetContact(group.phoneRaw),
-            );
-            nav.pop();
-          },
-        },
-      ],
+    await runAction(`forget-${group.phone}`, () =>
+      ContactNames.forgetContact(group.phoneRaw),
     );
+    setConfirmForget(false);
+    nav.pop();
   };
 
   return (
@@ -146,12 +138,23 @@ export function ContactDetailScreen() {
       </Pressable>
 
       {group ? (
-        <Pressable style={styles.removeButton} onPress={confirmForget}>
+        <Pressable style={styles.removeButton} onPress={() => setConfirmForget(true)}>
           <Text style={styles.removeButtonText}>
             Stop managing this contact
           </Text>
         </Pressable>
       ) : null}
+
+      <ConfirmDialog
+        visible={confirmForget}
+        destructive
+        busy={busy !== null}
+        title={`Stop managing ${label}?`}
+        message="The contact is renamed back to its original name and all of its time slots are deleted. This cannot be undone."
+        confirmLabel="Stop managing"
+        onConfirm={doForget}
+        onCancel={() => setConfirmForget(false)}
+      />
 
       <SlotEditorModal
         visible={editor !== null}
@@ -159,7 +162,17 @@ export function ContactDetailScreen() {
         contactLabel={`${label} · ${params.phoneRaw}`}
         schedule={editor?.schedule ?? null}
         onClose={() => setEditor(null)}
-        onSaved={() => {}}
+        onSaved={setSavedSummary}
+      />
+
+      <ConfirmDialog
+        visible={savedSummary !== null}
+        title="Slot saved"
+        message={savedSummary ?? ''}
+        confirmLabel="Got it"
+        cancelLabel="Close"
+        onConfirm={() => setSavedSummary(null)}
+        onCancel={() => setSavedSummary(null)}
       />
     </ScrollView>
   );

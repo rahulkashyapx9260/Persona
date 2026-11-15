@@ -167,3 +167,64 @@ export function formatClock(timestamp: number | null): string {
   // Day schedules can push the next change up to a week out.
   return `${DAY_NAMES[date.getDay()]} at ${time}`;
 }
+
+// ------------------------------------------------------- next occurrence
+
+/**
+ * When this slot next starts, as a timestamp, or null if its day set is
+ * empty. Walks the coming week rather than assuming today or tomorrow,
+ * because a weekend-only slot seen on Monday is five days out.
+ */
+export function nextStartAt(
+  startMinutes: number,
+  daysMask: number,
+  from: Date = new Date(),
+): number | null {
+  if ((daysMask & ALL_DAYS) === 0) {
+    return null;
+  }
+  const midnight = new Date(
+    from.getFullYear(),
+    from.getMonth(),
+    from.getDate(),
+  ).getTime();
+
+  // Eight days, so a slot that runs only today is still found a week out
+  // once today's occurrence has passed.
+  for (let offset = 0; offset <= 7; offset++) {
+    const dayIndex = (from.getDay() + offset) % 7;
+    if (!runsOn(daysMask, dayIndex)) {
+      continue;
+    }
+    const candidate = midnight + offset * 86_400_000 + startMinutes * 60_000;
+    if (candidate > from.getTime()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * A rounded, human gap: "in 4 minutes", "in 2 hours 5 minutes", "in 3 days".
+ * Seconds are never shown — nobody needs that precision here, and it would
+ * be stale the moment it is read.
+ */
+export function formatGap(fromNow: number): string {
+  const minutes = Math.round(fromNow / 60_000);
+  if (minutes < 1) {
+    return 'in under a minute';
+  }
+  if (minutes < 60) {
+    return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours < 24) {
+    const hourPart = `${hours} hour${hours === 1 ? '' : 's'}`;
+    return rest === 0
+      ? `in ${hourPart}`
+      : `in ${hourPart} ${rest} minute${rest === 1 ? '' : 's'}`;
+  }
+  const days = Math.round(hours / 24);
+  return `in ${days} day${days === 1 ? '' : 's'}`;
+}

@@ -4,11 +4,13 @@ import {
   WEEKEND,
   dayCount,
   daysLabel,
+  formatGap,
   isActiveAt,
   isActiveOn,
   labelToMinutes,
   minutesToLabel,
   minutesToLabel12h,
+  nextStartAt,
   runsOn,
   toggleDay,
 } from '../src/time';
@@ -110,5 +112,51 @@ describe('isActiveOn', () => {
     expect(isActiveOn(22 * 60, 6 * 60, mondayOnly, 2 * 60, MON)).toBe(false);
     // And the slot is over once the end time passes.
     expect(isActiveOn(22 * 60, 6 * 60, mondayOnly, 7 * 60, TUE)).toBe(false);
+  });
+});
+
+describe('formatGap', () => {
+  it('rounds to units a person would say out loud', () => {
+    expect(formatGap(20 * 1000)).toBe('in under a minute');
+    expect(formatGap(60 * 1000)).toBe('in 1 minute');
+    expect(formatGap(4 * 60 * 1000)).toBe('in 4 minutes');
+    expect(formatGap(60 * 60 * 1000)).toBe('in 1 hour');
+    expect(formatGap((2 * 60 + 5) * 60 * 1000)).toBe('in 2 hours 5 minutes');
+    expect(formatGap(3 * 24 * 60 * 60 * 1000)).toBe('in 3 days');
+  });
+});
+
+describe('nextStartAt', () => {
+  // A Wednesday, 10:00.
+  const wednesday = new Date(2026, 10, 18, 10, 0, 0, 0);
+  const WED = 3;
+  const SAT = 6;
+
+  it('finds later today when the slot still starts today', () => {
+    const at = nextStartAt(13 * 60, ALL_DAYS, wednesday);
+    expect(new Date(at!).getDate()).toBe(18);
+    expect(new Date(at!).getHours()).toBe(13);
+  });
+
+  it('rolls to tomorrow once today has passed', () => {
+    const at = nextStartAt(9 * 60, ALL_DAYS, wednesday);
+    expect(new Date(at!).getDate()).toBe(19);
+  });
+
+  it('skips days the slot does not run on', () => {
+    const saturdayOnly = 1 << SAT;
+    const at = nextStartAt(9 * 60, saturdayOnly, wednesday);
+    // Wednesday the 18th to Saturday the 21st.
+    expect(new Date(at!).getDate()).toBe(21);
+  });
+
+  it('comes back a week later for a passed, single-day slot', () => {
+    const wednesdayOnly = 1 << WED;
+    const at = nextStartAt(9 * 60, wednesdayOnly, wednesday);
+    expect(new Date(at!).getDate()).toBe(25);
+  });
+
+  it('has no answer when no day is selected', () => {
+    expect(nextStartAt(9 * 60, 0, wednesday)).toBeNull();
   });
 });

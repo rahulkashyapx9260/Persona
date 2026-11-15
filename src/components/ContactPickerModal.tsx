@@ -147,13 +147,18 @@ export function ContactPickerModal({visible, onClose, onSelect}: Props) {
 
 const makeStyles = (c: Colors) =>
   ({
-    container: {flex: 1, backgroundColor: 'transparent', paddingTop: spacing.xl},
+    container: {
+      flex: 1,
+      backgroundColor: 'transparent',
+      // Clears the status bar, which the modal draws under.
+      paddingTop: spacing.xl * 2,
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.md,
+      paddingBottom: spacing.lg,
     },
     title: {color: c.text, fontSize: 24, fontWeight: '800'},
     closePill: {
