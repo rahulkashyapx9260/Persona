@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {Pressable, ScrollView, Switch, Text, View} from 'react-native';
 
+import {ConfirmDialog} from '../components/ConfirmDialog';
 import {ErrorBanner, FeatureCard, SectionLabel} from '../components/ui';
 import {useNavigation} from '../navigation/Navigator';
 import {
@@ -187,7 +188,9 @@ export function SettingsScreen() {
   const palette = useColors();
   const nav = useNavigation<ScreenName>();
   const [mode, setMode] = useThemeMode();
-  const {notifications, permissions, batteryUnrestricted} = useAppData();
+  const {notifications, permissions, batteryUnrestricted, busy, runAction} =
+    useAppData();
+  const [fileResult, setFileResult] = useState<string | null>(null);
 
   const followSystem = mode === 'system';
   const isDark = useIsDark();
@@ -279,6 +282,50 @@ export function SettingsScreen() {
             : 'Changes may arrive late — worth a look'
         }
         onPress={() => nav.push('alarms')}
+      />
+
+      <SectionLabel>Safety</SectionLabel>
+
+      <View style={styles.card}>
+        <Text style={styles.title}>Backup outside the app</Text>
+        <Text style={styles.paragraph}>
+          Persona keeps a copy of your original names in
+          Downloads/Persona/persona-contact-backup.json. Uninstalling the app
+          deletes its own database, but not that file — so if a contact is
+          ever left with a changed name, you can put it back from here.
+        </Text>
+        <Pressable
+          style={styles.secondaryButton}
+          disabled={busy !== null}
+          onPress={() =>
+            runAction('restore-file', async () => {
+              const result = await ContactNames.restoreFromBackupFile();
+              if (result) {
+                setFileResult(
+                  `${result.restored} of ${result.found} name${
+                    result.found === 1 ? '' : 's'
+                  } put back` +
+                    (result.failed
+                      ? `, ${result.failed} could not be changed.`
+                      : '.'),
+                );
+              }
+            })
+          }>
+          <Text style={styles.secondaryButtonText}>
+            Restore from a backup file
+          </Text>
+        </Pressable>
+      </View>
+
+      <ConfirmDialog
+        visible={fileResult !== null}
+        title="Restore finished"
+        message={fileResult ?? ''}
+        confirmLabel="Done"
+        cancelLabel="Close"
+        onConfirm={() => setFileResult(null)}
+        onCancel={() => setFileResult(null)}
       />
     </ScrollView>
   );
@@ -382,6 +429,15 @@ const makeStyles = (c: Colors) =>
       alignItems: 'center',
     },
     primaryButtonText: {color: c.accentText, fontWeight: '700', fontSize: 15},
+    secondaryButton: {
+      backgroundColor: c.surfaceAlt,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    secondaryButtonText: {color: c.text, fontWeight: '600', fontSize: 15},
 
     modeList: {gap: spacing.sm},
     mode: {

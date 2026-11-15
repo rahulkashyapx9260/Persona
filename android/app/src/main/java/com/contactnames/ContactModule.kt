@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -25,7 +26,27 @@ import com.facebook.react.bridge.WritableMap
  */
 @ReactModule(name = ContactModule.NAME)
 class ContactModule(private val reactContext: ReactApplicationContext) :
-  ReactContextBaseJavaModule(reactContext) {
+  ReactContextBaseJavaModule(reactContext), ActivityEventListener {
+
+  /** Settled when the file picker returns; only one may be open at a time. */
+  private var pendingRestore: Promise? = null
+
+  init {
+    reactContext.addActivityEventListener(this)
+  }
+
+  override fun onActivityResult(
+    activity: Activity,
+    requestCode: Int,
+    resultCode: Int,
+    data: Intent?,
+  ) {
+    if (requestCode == PICK_BACKUP_REQUEST) {
+      handlePickedBackup(if (resultCode == Activity.RESULT_OK) data else null)
+    }
+  }
+
+  override fun onNewIntent(intent: Intent) = Unit
 
   override fun getName() = NAME
 
@@ -342,6 +363,96 @@ class ContactModule(private val reactContext: ReactApplicationContext) :
     }
   }
 
+  // --------------------------------------------------------- backup to file
+
+  /** Mirrors the current backups into shared storage, outside app data. */
+  @ReactMethod
+  fun exportBackupFile(promise: Promise) {
+    try {
+      ExternalBackup.write(reactContext, store.allBackups())
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject(E_FAIL, e)
+    }
+  }
+
+  /**
+   * Opens the system file picker and restores from whatever is chosen.
+   *
+   * This is how a backup survives an uninstall: the file outlives the app,
+   * and the picker grants read access to just that one file, so the app
+   * never needs storage permission of its own.
+   */
+  @ReactMethod
+  fun restoreFromBackupFile(promise: Promise) {
+    val activity = reactContext.currentActivity
+    if (activity == null) {
+      promise.reject(E_FAIL, "No foreground activity to show the picker on")
+      return
+    }
+    if (pendingRestore != null) {
+      promise.reject(E_FAIL, "A restore is already in progress")
+      return
+    }
+
+    pendingRestore = promise
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+      .addCategory(Intent.CATEGORY_OPENABLE)
+      // Some providers label .json as octet-stream, so both are accepted.
+      .setType("*/*")
+      .putExtra(
+        Intent.EXTRA_MIME_TYPES,
+        arrayOf("application/json", "text/plain", "application/octet-stream"),
+      )
+    try {
+      activity.startActivityForResult(intent, PICK_BACKUP_REQUEST)
+    } catch (e: Exception) {
+      pendingRestore = null
+      promise.reject(E_FAIL, e)
+    }
+  }
+
+  private fun handlePickedBackup(data: Intent?) {
+    val promise = pendingRestore ?: return
+    pendingRestore = null
+
+    val uri = data?.data
+    if (uri == null) {
+      // Cancelled; not an error worth showing anyone.
+      promise.resolve(null)
+      return
+    }
+
+    Thread {
+      try {
+        val json = reactContext.contentResolver.openInputStream(uri)
+          ?.bufferedReader()?.use { it.readText() }
+          ?: throw IllegalStateException("Could not read that file")
+
+        val entries = ExternalBackup.parse(json)
+        if (entries.isEmpty()) {
+          promise.reject(E_INVALID, "That backup file has no contacts in it")
+          return@Thread
+        }
+        if (!AlarmReceiver.hasContactsPermissions(reactContext)) {
+          promise.reject(E_PERMISSION, "READ_CONTACTS/WRITE_CONTACTS not granted")
+          return@Thread
+        }
+
+        val (restored, failed) = ExternalBackup.restore(reactContext, entries)
+        promise.resolve(
+          Arguments.createMap().apply {
+            putInt("found", entries.size)
+            putInt("restored", restored)
+            putInt("failed", failed)
+          },
+        )
+      } catch (e: Exception) {
+        promise.reject(E_INVALID, e.message ?: "That file could not be read", e)
+      }
+    }.start()
+  }
+
   // ----------------------------------------------------------------- updates
 
   @ReactMethod
@@ -584,6 +695,7 @@ class ContactModule(private val reactContext: ReactApplicationContext) :
     private const val E_INVALID = "E_INVALID_INPUT"
     private const val E_NOT_FOUND = "E_CONTACT_NOT_FOUND"
     private const val E_NETWORK = "E_NETWORK"
+    private const val PICK_BACKUP_REQUEST = 7791
 
     val REQUIRED_PERMISSIONS = arrayOf(
       Manifest.permission.READ_CONTACTS,

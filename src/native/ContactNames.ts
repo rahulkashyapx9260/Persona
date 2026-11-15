@@ -44,6 +44,12 @@ export type AppVersion = {
   canInstall: boolean;
 };
 
+export type RestoreFromFileResult = {
+  found: number;
+  restored: number;
+  failed: number;
+};
+
 export type NotificationSettings = {
   enabled: boolean;
   permissionGranted: boolean;
@@ -103,6 +109,13 @@ type ContactModuleSpec = {
   getBackups(): Promise<Backup[]>;
   getHistory(limit: number): Promise<HistoryEntry[]>;
   clearHistory(): Promise<boolean>;
+  /** Mirrors the saved original names to a file outside app storage. */
+  exportBackupFile(): Promise<boolean>;
+  /**
+   * Opens the system file picker and restores from the chosen backup.
+   * Resolves with null when the user backs out.
+   */
+  restoreFromBackupFile(): Promise<RestoreFromFileResult | null>;
   getAppVersion(): Promise<AppVersion>;
   /** Returns the manifest body as text, to be parsed by the caller. */
   fetchUpdateManifest(url: string): Promise<string>;

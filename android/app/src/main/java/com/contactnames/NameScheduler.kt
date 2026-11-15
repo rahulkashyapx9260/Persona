@@ -152,6 +152,9 @@ object NameScheduler {
     if (existing != null) return existing
     val record = ContactRepository.findByPhone(context, phoneRaw) ?: return null
     store.rememberOriginal(phone, record.phoneRaw, record.displayName, record.rawContactIds)
+    // The spare copy lives outside app storage, so an uninstall cannot take
+    // the only record of this contact's real name with it.
+    ExternalBackup.write(context, store.allBackups())
     return store.getBackup(phone)
   }
 
