@@ -7,12 +7,14 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
+    "@react-native/new-app-screen": "0.88.1",
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "@react-native/new-app-screen": "0.88.1",
+    "react-native-contacts": "^8.0.10",
     "react-native-safe-area-context": "^5.5.2"
   },
   "devDependencies": {

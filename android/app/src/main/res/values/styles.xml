@@ -1,9 +1,13 @@
 <resources>
 
-    <!-- Base application theme. -->
+    <!--
+      The window the system draws before React Native has mounted anything.
+      Without a background of its own it flashes white, which reads as a
+      stutter on launch, so it carries the brand colour and the mark instead.
+    -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:windowBackground">@drawable/launch_screen</item>
     </style>
 
 </resources>
