@@ -50,7 +50,13 @@ console.log(`version  ${versionName} (code ${nextCode})`);
 // ------------------------------------------------------------------- build
 
 console.log('building signed release APK…');
-const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+// An absolute path, because a bare `gradlew.bat` is looked up on PATH
+// rather than in the working directory on Windows.
+const gradlew = join(
+  root,
+  'android',
+  process.platform === 'win32' ? 'gradlew.bat' : 'gradlew',
+);
 try {
   execFileSync(gradlew, ['app:assembleRelease'], {
     cwd: join(root, 'android'),
@@ -94,16 +100,19 @@ try {
 const manifest = {
   versionCode: nextCode,
   versionName,
+  // Both the tag and the file name carry the version, so both are rewritten
+  // — replacing only the file name left the URL pointing at the previous
+  // release's tag, which does not contain the new APK.
   apkUrl: String(previous.apkUrl ?? '').replace(
-    /Persona-[\d.]+\.apk$/,
-    apkName,
+    /\/download\/v[\d.]+\/Persona-[\d.]+\.apk$/,
+    `/download/v${versionName}/${apkName}`,
   ),
   notes: notes ?? `Persona ${versionName}`,
 };
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 
 console.log(`\napk      dist/${apkName}`);
-console.log(`manifest dist/latest.json`);
+console.log('manifest latest.json');
 if (!/^https:\/\//.test(manifest.apkUrl)) {
   console.log(
     '\nNext: upload the APK somewhere public, put that download URL in\n' +

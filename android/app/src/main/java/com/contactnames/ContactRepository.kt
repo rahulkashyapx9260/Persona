@@ -339,19 +339,21 @@ object ContactRepository {
           .withValue(ContactsContract.Data.RAW_CONTACT_ID, rawId)
           .withValue(ContactsContract.Data.MIMETYPE, mimeType)
       }
-      // DISPLAY_NAME drives the aggregated name; the structured parts are
-      // cleared so a stale surname cannot reappear in the rendered name.
+      // Only the display name is written, and deliberately so.
+      //
+      // The provider rebuilds the shown name from the structured parts. When
+      // an update carries both a display name and structured fields it
+      // applies them verbatim, and a field left null counts as "not
+      // supplied" — so the previous surname survived. Renaming "Rahul" to
+      // "Test Number" and back therefore produced "Rahul Number".
+      //
+      // Supplying the display name alone makes the provider split it and
+      // overwrite every structured part, which clears the stale surname and
+      // keeps a sensible first/last split for the restored original name
+      // instead of flattening it.
       ops.add(
         builder
           .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, newName)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME, newName)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME, null)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.MIDDLE_NAME, null)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.PREFIX, null)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.SUFFIX, null)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME, null)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.PHONETIC_FAMILY_NAME, null)
-          .withValue(ContactsContract.CommonDataKinds.StructuredName.PHONETIC_MIDDLE_NAME, null)
           .build(),
       )
     }

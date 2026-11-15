@@ -1,6 +1,6 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0",
-  "apkUrl": "https://github.com/rahulkashyapx9260/Persona/releases/download/v1.0/Persona-1.0.apk",
-  "notes": "Persona 1.0"
+  "versionCode": 2,
+  "versionName": "1.1",
+  "apkUrl": "https://github.com/rahulkashyapx9260/Persona/releases/download/v1.1/Persona-1.1.apk",
+  "notes": "Uninstall safety backup, and a fix for leftover surnames after a rename"
 }
