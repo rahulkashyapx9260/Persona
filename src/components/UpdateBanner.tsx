@@ -27,7 +27,11 @@ export function UpdateBanner({state}: {state: UpdateState}) {
       </View>
 
       <Text style={styles.notes}>
-        {available.notes ?? 'A newer version of Persona is ready to install.'}
+        {available.notes ?? 'A newer version of Persona is available.'}
+      </Text>
+      <Text style={styles.hint}>
+        The download opens in your browser; tap the file to install it over
+        this version. Your schedules and names are kept.
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -48,7 +52,7 @@ export function UpdateBanner({state}: {state: UpdateState}) {
             downloading && styles.disabled,
           ]}>
           <Text style={styles.primaryText}>
-            {downloading ? 'Downloading…' : 'Update'}
+            {downloading ? 'Opening…' : 'Download'}
           </Text>
         </Pressable>
       </View>
@@ -75,6 +79,7 @@ const makeStyles = (c: Colors) =>
     },
     version: {color: c.text, fontSize: 15, fontWeight: '700'},
     notes: {color: c.textMuted, fontSize: 14, lineHeight: 20},
+    hint: {color: c.textMuted, fontSize: 12, lineHeight: 18, marginTop: spacing.sm, opacity: 0.8},
     error: {color: c.danger, fontSize: 13, lineHeight: 19, marginTop: spacing.sm},
     actions: {flexDirection: 'row', marginTop: spacing.lg},
     ghost: {

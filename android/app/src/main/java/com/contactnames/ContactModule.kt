@@ -463,7 +463,6 @@ class ContactModule(private val reactContext: ReactApplicationContext) :
           // A JS number holds this exactly; version codes never get near 2^53.
           putDouble("versionCode", Updater.currentVersionCode(reactContext).toDouble())
           putString("versionName", Updater.currentVersionName(reactContext))
-          putBoolean("canInstall", Updater.canInstall(reactContext))
         },
       )
     } catch (e: Exception) {
@@ -483,27 +482,11 @@ class ContactModule(private val reactContext: ReactApplicationContext) :
     }.start()
   }
 
+  /** Opens the download in a browser; this app cannot install anything. */
   @ReactMethod
-  fun downloadUpdate(url: String, fileName: String, promise: Promise) {
-    Thread {
-      try {
-        promise.resolve(Updater.download(reactContext, url, fileName).absolutePath)
-      } catch (e: Exception) {
-        promise.reject(E_NETWORK, e.message ?: "Download failed", e)
-      }
-    }.start()
-  }
-
-  @ReactMethod
-  fun installUpdate(path: String, promise: Promise) {
+  fun openUpdatePage(url: String, promise: Promise) {
     try {
-      if (!Updater.canInstall(reactContext)) {
-        Updater.openInstallPermission(reactContext)
-        promise.resolve(false)
-        return
-      }
-      Updater.install(reactContext, java.io.File(path))
-      promise.resolve(true)
+      promise.resolve(Updater.openInBrowser(reactContext, url))
     } catch (e: Exception) {
       promise.reject(E_FAIL, e)
     }

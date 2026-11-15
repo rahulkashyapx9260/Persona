@@ -40,8 +40,6 @@ export type HistoryEntry = {
 export type AppVersion = {
   versionCode: number;
   versionName: string;
-  /** Whether Android will let this app hand an APK to the installer. */
-  canInstall: boolean;
 };
 
 export type RestoreFromFileResult = {
@@ -119,10 +117,11 @@ type ContactModuleSpec = {
   getAppVersion(): Promise<AppVersion>;
   /** Returns the manifest body as text, to be parsed by the caller. */
   fetchUpdateManifest(url: string): Promise<string>;
-  /** Downloads the APK and resolves with its local path. */
-  downloadUpdate(url: string, fileName: string): Promise<string>;
-  /** False when Android first needs the install-unknown-apps grant. */
-  installUpdate(path: string): Promise<boolean>;
+  /**
+   * Opens the download in a browser. The app has no permission to install
+   * anything itself — Android handles that, as it does for any download.
+   */
+  openUpdatePage(url: string): Promise<boolean>;
   isBatteryUnrestricted(): Promise<boolean>;
   /** Shows the system's one-tap dialog. False if no screen could be opened. */
   requestBatteryUnrestricted(): Promise<boolean>;

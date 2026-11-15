@@ -1,14 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      Used only by the in-app updater: fetching the version manifest and
-      downloading the new APK. Nothing else in the app talks to the network,
-      and no contact data ever leaves the phone.
+      Used only to check whether a newer version has been published. Nothing
+      else in the app talks to the network, and no contact data ever leaves
+      the phone.
+
+      The app deliberately cannot install anything: holding
+      REQUEST_INSTALL_PACKAGES alongside contacts access matches what Play
+      Protect treats as a dropper, and it blocked the install outright. An
+      update opens in the browser instead, and Android asks there.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Lets the app hand the downloaded APK to Android's installer. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
@@ -54,16 +56,6 @@
       </activity>
 
       <!-- Fires at every slot boundary. Internal only, so not exported. -->
-      <provider
-        android:name="androidx.core.content.FileProvider"
-        android:authorities="${applicationId}.fileprovider"
-        android:exported="false"
-        android:grantUriPermissions="true">
-        <meta-data
-          android:name="android.support.FILE_PROVIDER_PATHS"
-          android:resource="@xml/file_paths" />
-      </provider>
-
       <receiver
         android:name=".AlarmReceiver"
         android:enabled="true"

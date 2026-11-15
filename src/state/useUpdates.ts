@@ -20,8 +20,8 @@ export type UpdateState = {
   available: UpdateManifest | null;
   current: AppVersion | null;
   checking: boolean;
+  /** True while the browser is being opened. */
   downloading: boolean;
-  /** Progress is not reported by the native download, so this is a phase. */
   error: string | null;
   check: (force?: boolean) => Promise<void>;
   install: () => Promise<void>;
@@ -100,13 +100,13 @@ export function useUpdates(): UpdateState {
     setDownloading(true);
     setError(null);
     try {
-      const fileName = `Persona-${available.versionName}.apk`;
-      const path = await ContactNames.downloadUpdate(available.apkUrl, fileName);
-      const started = await ContactNames.installUpdate(path);
-      if (!started) {
-        setError(
-          'Android needs permission to install updates from Persona. Allow it on the screen that just opened, then tap Update again.',
-        );
+      // The browser downloads it and Android asks about installing, exactly
+      // as it would for any other file. Doing that inside the app would
+      // need REQUEST_INSTALL_PACKAGES, which next to contacts access is
+      // what got the app flagged as harmful.
+      const opened = await ContactNames.openUpdatePage(available.apkUrl);
+      if (!opened) {
+        setError('No browser available to download the update.');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

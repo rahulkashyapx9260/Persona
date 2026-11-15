@@ -188,8 +188,15 @@ export function SettingsScreen() {
   const palette = useColors();
   const nav = useNavigation<ScreenName>();
   const [mode, setMode] = useThemeMode();
-  const {notifications, permissions, batteryUnrestricted, busy, runAction} =
-    useAppData();
+  const {
+    notifications,
+    permissions,
+    batteryUnrestricted,
+    busy,
+    runAction,
+    updates,
+  } = useAppData();
+  const [checkedOnce, setCheckedOnce] = useState(false);
   const [fileResult, setFileResult] = useState<string | null>(null);
 
   const followSystem = mode === 'system';
@@ -283,6 +290,35 @@ export function SettingsScreen() {
         }
         onPress={() => nav.push('alarms')}
       />
+
+      <SectionLabel>About</SectionLabel>
+
+      <View style={styles.card}>
+        <Text style={styles.title}>
+          Persona {updates.current?.versionName ?? ''}
+        </Text>
+        <Text style={styles.paragraph}>
+          {updates.available
+            ? `Version ${updates.available.versionName} is ready to install — open the banner on the home screen.`
+            : checkedOnce
+              ? 'You are on the latest version.'
+              : 'Persona checks for a new version every few hours. You can also check now.'}
+        </Text>
+        {updates.error ? (
+          <Text style={styles.warningText}>{updates.error}</Text>
+        ) : null}
+        <Pressable
+          style={styles.secondaryButton}
+          disabled={updates.checking}
+          onPress={async () => {
+            await updates.check(true);
+            setCheckedOnce(true);
+          }}>
+          <Text style={styles.secondaryButtonText}>
+            {updates.checking ? 'Checking…' : 'Check for updates'}
+          </Text>
+        </Pressable>
+      </View>
 
       <SectionLabel>Safety</SectionLabel>
 
