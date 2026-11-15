@@ -1,9 +1,10 @@
 /**
  * Where the app looks for a newer build.
  *
- * Point this at a small JSON file you control. GitHub Releases works well and
- * costs nothing: commit `latest.json` to a public repo and use its raw URL,
- * then attach the APK to a release and put that download URL in `apkUrl`.
+ * It reads `latest.json` from the repository root over GitHub's raw host.
+ * `npm run release` rewrites that file; committing and pushing it is what
+ * actually publishes an update. The APK itself is attached to a GitHub
+ * release, and `apkUrl` points at that download.
  *
  * The file looks like this — `scripts/release.mjs` writes it for you:
  *
@@ -14,10 +15,11 @@
  *     "notes": "Faster contact search."
  *   }
  *
- * Until this is set to a real URL the updater stays switched off: no network
- * calls are made and nothing about updates appears in the UI.
+ * Blanking this switches the updater off entirely: no network calls are made
+ * and nothing about updates appears in the UI.
  */
-export const UPDATE_MANIFEST_URL = '';
+export const UPDATE_MANIFEST_URL =
+  'https://raw.githubusercontent.com/rahulkashyapx9260/Persona/main/latest.json';
 
 /** True when an update source has actually been configured. */
 export function updatesConfigured(): boolean {

@@ -80,9 +80,10 @@ const builtApk = join(
 const apkName = `Persona-${versionName}.apk`;
 copyFileSync(builtApk, join(distDir, apkName));
 
-// `apkUrl` is filled in once the APK is uploaded; the updater ignores a
-// manifest whose URL is not https, so a half-filled file is harmless.
-const manifestPath = join(distDir, 'latest.json');
+// The manifest lives at the repository root because that is what the app
+// fetches over GitHub's raw host — dist/ is ignored by git and would never
+// be published. The APK stays in dist/ and is attached to a GitHub release.
+const manifestPath = join(root, 'latest.json');
 let previous = {};
 try {
   previous = JSON.parse(readFileSync(manifestPath, 'utf8'));
